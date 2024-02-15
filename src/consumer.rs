@@ -1,9 +1,11 @@
 use std::{print, println};
 
-use alloc::{boxed::Box, vec};
-extern crate std;
-
+use alloc::{
+    boxed::Box,
+    vec::{self, Vec},
+};
 extern crate alloc;
+extern crate std;
 
 pub trait MemoryReader {
     fn read_memory(
@@ -20,6 +22,11 @@ pub struct ProducerDevice<'a> {
     rb_size: u8,
 }
 
+const ADDR_SIZE: usize = 3;
+const ADDR_PROD: usize = 4;
+const ADDR_CONS: usize = 5;
+const ADDR_BUFF: usize = 6;
+
 impl<'a> ProducerDevice<'a> {
     pub fn new(
         mut memory_reader: Box<dyn MemoryReader>,
@@ -29,8 +36,8 @@ impl<'a> ProducerDevice<'a> {
         let mut magic_markers = [0; 3];
         memory_reader.read_memory(ram_start_address, &mut magic_markers);
 
-        const WANT_MAGIC: [u8; 3] = [0x88, 0x88, 0x88];
-        if magic_markers != [0x88, 0x88, 0x88] {
+        const WANT_MAGIC: [u8; 3] = [0x88, 0x88, 0x88]; // XXX to share amongst prod/cons
+        if magic_markers != WANT_MAGIC {
             //return Err("Magic markers don't start with 0x88".to_string());
             panic!(
                 "Magic markers arent {:02x?}: {:02x?}",
@@ -56,11 +63,36 @@ impl<'a> ProducerDevice<'a> {
         })
     }
 
-    pub fn read_byte(&mut self) -> Option<u8> {
-        let size = 3;
-        let mut buf = vec![0; size];
-        let b = self.memory_reader.read_memory(2, &mut buf);
+    fn read_one_byte(&mut self, address: usize) -> Result<u8, ()> {
+        // Basically the same as read_memory, but only reads
+        // one byte. Easier than allocating a buffer, etc..
 
-        Some(8)
+        let mut buf = [0u8; 1];
+        match self.memory_reader.read_memory(address, &mut buf) {
+            Ok(_) => Ok(buf[0]),
+            Err(x) => Err(()),
+        }
+    }
+
+    pub fn read_bytes(&mut self) -> Vec<u8> {
+        let mut bytes: Vec<u8> = alloc::vec![];
+
+        //for mem_addr in 0x3f00..0x3f0f {
+        let prod_a = self.ram_start + ADDR_PROD;
+        let cons_a = self.ram_start + ADDR_CONS;
+        let buff_a = self.ram_start + ADDR_BUFF;
+
+        let mut prod_v = self.read_one_byte(prod_a).unwrap();
+        let mut cons_v = self.read_one_byte(cons_a).unwrap();
+
+        while prod_v != cons_v {
+            let buff_a = buff_a + cons_v as usize;
+            let buff_v = self.read_one_byte(buff_a).unwrap(); // XXX TODO: we could read the whole range
+            cons_v = (cons_v + 1) % 5;
+            bytes.push(buff_v);
+            //            println!("RCVD: {:02x?}", buff_v);
+            self.memory_reader.write_memory(cons_a, cons_v);
+        }
+        bytes
     }
 }
