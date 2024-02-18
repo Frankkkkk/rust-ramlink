@@ -1,7 +1,6 @@
+use alloc::{boxed::Box, vec::Vec};
 use core::fmt::Error;
 use std::println;
-
-use alloc::{boxed::Box, vec::Vec};
 extern crate alloc;
 extern crate std;
 
@@ -39,28 +38,26 @@ impl<'a> ProducerDevice<'a> {
         mut memory_reader: Box<dyn MemoryReader>,
         ram_start_address: usize,
     ) -> Result<ProducerDevice<'a>, ConsumerError> {
-        //First of all, ensure that we have the correct base address of the RB
         let mut magic_markers = [0; 3];
-        match memory_reader.read_memory(ram_start_address, &mut magic_markers) {
-            Err(x) => return Err(ConsumerError(ConsumerErrorKind::ReadMemoryError(x))),
-            _ => (),
-        }
+        memory_reader
+            .read_memory(ram_start_address, &mut magic_markers)
+            .map_err(|e| ConsumerError(ConsumerErrorKind::ReadMemoryError(e)))?;
 
         if magic_markers != RB_MAGIC {
             return Err(ConsumerError(ConsumerErrorKind::MagicMarkerNotFound));
         }
 
-        //Get the size of the RB
         let mut buf = [0; 1];
-        match memory_reader.read_memory(ram_start_address + ADDR_SIZE, &mut buf) {
-            Err(x) => return Err(ConsumerError(ConsumerErrorKind::ReadMemoryError(x))),
-            _ => (),
-        }
+        memory_reader
+            .read_memory(ram_start_address + ADDR_SIZE, &mut buf)
+            .map_err(|e| ConsumerError(ConsumerErrorKind::ReadMemoryError(e)))?;
+
         let rb_size = buf[0];
         if rb_size == 0 {
             return Err(ConsumerError(ConsumerErrorKind::RingBufferSizeNull));
         }
 
+        // XXX logging
         println!("The RB is of size {}", rb_size);
 
         Ok(ProducerDevice {
@@ -71,35 +68,30 @@ impl<'a> ProducerDevice<'a> {
     }
 
     fn read_one_byte(&mut self, address: usize) -> Result<u8, ConsumerError> {
-        // Basically the same as read_memory, but only reads
-        // one byte. Easier than allocating a buffer, etc..
-
         let mut buf = [0u8; 1];
-        match self.memory_reader.read_memory(address, &mut buf) {
-            Ok(_) => Ok(buf[0]),
-            Err(x) => Err(ConsumerError(ConsumerErrorKind::ReadMemoryError(x))),
-        }
+        self.memory_reader
+            .read_memory(address, &mut buf)
+            .map_err(|e| ConsumerError(ConsumerErrorKind::ReadMemoryError(e)))?;
+        Ok(buf[0])
     }
 
     pub fn read_bytes(&mut self) -> Result<Vec<u8>, ConsumerError> {
-        let mut bytes: Vec<u8> = alloc::vec![];
+        let mut bytes: Vec<u8> = Vec::new();
 
         let prod_a = self.ram_start + ADDR_PROD;
         let cons_a = self.ram_start + ADDR_CONS;
         let buff_a = self.ram_start + ADDR_BUFF;
 
-        let prod_v = self.read_one_byte(prod_a).unwrap();
-        let mut cons_v = self.read_one_byte(cons_a).unwrap();
+        let prod_v = self.read_one_byte(prod_a)?;
+        let mut cons_v = self.read_one_byte(cons_a)?;
 
         while prod_v != cons_v {
-            let buff_a = buff_a + cons_v as usize;
-            let buff_v = self.read_one_byte(buff_a).unwrap(); // XXX TODO: we could read the whole range
+            let buff_v = self.read_one_byte(buff_a + cons_v as usize)?;
             cons_v = (cons_v + 1) % self.rb_size;
             bytes.push(buff_v);
-            match self.memory_reader.write_memory(cons_a, cons_v) {
-                Err(x) => return Err(ConsumerError(ConsumerErrorKind::WriteMemoryError(x))),
-                _ => (),
-            }
+            self.memory_reader
+                .write_memory(cons_a, cons_v)
+                .map_err(|e| ConsumerError(ConsumerErrorKind::WriteMemoryError(e)))?;
         }
         Ok(bytes)
     }
