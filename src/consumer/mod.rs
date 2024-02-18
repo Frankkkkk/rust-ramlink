@@ -1,8 +1,8 @@
-use std::{print, println};
+use std::{println};
 
 use alloc::{
     boxed::Box,
-    vec::{self, Vec},
+    vec::{Vec},
 };
 extern crate alloc;
 extern crate std;
@@ -72,7 +72,7 @@ impl<'a> ProducerDevice<'a> {
         let mut buf = [0u8; 1];
         match self.memory_reader.read_memory(address, &mut buf) {
             Ok(_) => Ok(buf[0]),
-            Err(x) => Err(()),
+            Err(_x) => Err(()),
         }
     }
 
@@ -84,7 +84,7 @@ impl<'a> ProducerDevice<'a> {
         let cons_a = self.ram_start + ADDR_CONS;
         let buff_a = self.ram_start + ADDR_BUFF;
 
-        let mut prod_v = self.read_one_byte(prod_a).unwrap();
+        let prod_v = self.read_one_byte(prod_a).unwrap();
         let mut cons_v = self.read_one_byte(cons_a).unwrap();
 
         while prod_v != cons_v {
