@@ -1,6 +1,8 @@
 use const_assert::{Assert, IsTrue};
 use core::fmt;
 
+use super::RB_MAGIC;
+
 pub struct RB<const SIZE: usize> {
     _magic_marker: [u8; 3], // This eats 3 bytes for "nothing" but is useful for debuging purposes
     size: u8,
@@ -16,7 +18,7 @@ where
 {
     pub const fn new() -> RB<SIZE> {
         RB {
-            _magic_marker: [0x88, 0x88, 0x88],
+            _magic_marker: RB_MAGIC,
             size: SIZE as u8,
             //waiting: 2,
             producer: 0,

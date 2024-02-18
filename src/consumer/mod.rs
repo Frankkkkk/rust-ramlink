@@ -7,6 +7,8 @@ use alloc::{
 extern crate alloc;
 extern crate std;
 
+//use super::RB_MAGIC;
+
 pub trait MemoryReader {
     fn read_memory(
         &mut self,
