@@ -1,7 +1,16 @@
 [package]
 name = "ramlink"
 version = "0.1.0"
+authors = ["Frank Villaro-Dixon"]
+license = "MIT OR Apache-2.0"
 edition = "2021"
+description = "RAM-based, producer-consumer, one-way communication for microcontrollers, using a ring buffer"
+documentation = "https://docs.rs/ramlink"
+homepage = "https://github.com/Frankkkkk/rust-ramlink"
+repository = "https://github.com/Frankkkkk/rust-ramlink"
+keywords = ["ringbuffer", "microcontroller", "uart", "communication", "embedded"]
+categories = ["embedded"]
+readme = "README.md"
 
 [features]
 producer = []
