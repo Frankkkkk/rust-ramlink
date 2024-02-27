@@ -75,3 +75,8 @@ and start reading:
 ```
 
 <!-- cargo-rdme end -->
+
+# Contributing
+
+Given that I'm a rust noob, don't hesitate to raise issues or propose merge requests to make this code better and make me improve :-). Suggestions welcome !
+

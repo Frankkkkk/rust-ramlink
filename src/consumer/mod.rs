@@ -6,7 +6,7 @@
 //! - Know the exact memory location of the RB struct defined in your producer
 //! <br>
 //! # Example
-//! Implement the trait on your specific device
+//! Implement the trait for your specific device
 //! ```
 //!  struct mk2<'a> {
 //!      dev: JtagIceMkii<'a>,
